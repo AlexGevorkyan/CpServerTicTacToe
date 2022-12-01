@@ -22,7 +22,7 @@ namespace CpServerTicTacToe
         private static Semaphore _semaphore;
         private static string[] _characters;
 
-        static async void Main(string[] args)
+        static async Task Main(string[] args)
         {
             _logedUsers = new Dictionary<string, string>();
             _semaphore = new Semaphore(QUANTITY_OF_CLIENTS, QUANTITY_OF_CLIENTS);
