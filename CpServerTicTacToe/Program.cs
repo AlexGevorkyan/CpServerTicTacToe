@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CpServerTicTacToe
 {
-    internal class Program
+    public class Program
     {
         private const int _COUNT_USERS = 2;
 
@@ -25,59 +25,77 @@ namespace CpServerTicTacToe
         private static Move _currentMove;
         private static List<string> _users;
         private static BinaryFormatter _formatter;
-        private static NetworkStream _networkStream;
-        private static Semaphore _semaphore;
+        private static NetworkStream _networkStream1;
+        private static NetworkStream _networkStream2;
+        private static EventWaitHandle wh;
         private static int _curentCountUsers = 0;
-
+        int mark1 = 1, mark2 = 2;
 
         private async static Task Main(string[] args)
         {
             _server = new TcpListener(IPAddress.Parse(_ipAddress), _port);
-            _semaphore = new Semaphore(_COUNT_USERS, _COUNT_USERS);
             _server.Start();
-            await Task.Run(Listen);
+            wh = new EventWaitHandle(false, EventResetMode.AutoReset);
+            _formatter = new BinaryFormatter(); 
+            Task.Run(Listen2);
+            Task.Delay(500);
+            await Task.Run(Listen1);
+
         }
 
-        private static void Listen()
+        private static void Listen1()
         {
+            Console.WriteLine("Start listening for first player....");
             var client = _server.AcceptTcpClient();
-            _semaphore.WaitOne();
-            _curentCountUsers++;
-            WaitForAllConnect();            
-
-            var _networkStream = client.GetStream();
+            Console.WriteLine("First player connected!");
+            _networkStream1 = client.GetStream();
 
             while (true)
             {
-                using (var streamReader = new StreamReader(_networkStream, Encoding.UTF8))
+                using (var streamReader = new StreamReader(_networkStream1, Encoding.UTF8))
                 {
-                    _currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    _field = _currentMove.Field;
-
-                    if (!_users.Contains(_currentMove.PlayerName))
-                        _users.Add(_currentMove.PlayerName);
+                    Move currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
+                    int index = currentMove.Field[0];
+                    _field[index] = mark1;
+                    wh.Set();
+                    wh.WaitOne();
                 }
-                SendAnswer();
+                SendAnswer(_networkStream1);
             }
         }
 
-        private static void WaitForAllConnect()
+        private static void Listen2()
         {
+            Console.WriteLine("Start listening for second player....");
+            var client = _server.AcceptTcpClient();
+            _networkStream2 = client.GetStream();
+            Console.WriteLine("Second player connected!");
+            wh.WaitOne();
+            Move currentMove = null;
+
             while (true)
             {
-                if (_curentCountUsers == 2)
-                    break;
+                using (var streamReader = new StreamReader(_networkStream2, Encoding.UTF8))
+                {
+                    currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
+                    int index = currentMove.Field[0];
+                    _field[index] = mark2;
+                }
+                SendAnswer(_networkStream2);
+                _field = currentMove.Field;
+                wh.Set();
+                wh.WaitOne();
             }
         }
 
-        private static void SendAnswer()
+        private static void SendAnswer(NetworkStream networkStream)
         {
             try
             {
                 using (var memoryStream = new MemoryStream())
                 {
                     _formatter.Serialize(memoryStream, _field);
-                    _networkStream.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
+                    networkStream.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
                     memoryStream.Flush();
                 }
             }

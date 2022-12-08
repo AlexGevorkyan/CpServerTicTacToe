@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <Reference Include="CpMove">
-      <HintPath>..\..\Move\CpMove\bin\Debug\CpMove.dll</HintPath>
+      <HintPath>..\..\CpClient\CpClientTicTacToe\bin\Debug\netcoreapp3.1\CpMove.dll</HintPath>
     </Reference>
   </ItemGroup>
 
