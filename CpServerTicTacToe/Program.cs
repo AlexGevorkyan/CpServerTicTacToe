@@ -114,7 +114,8 @@ namespace CpServerTicTacToe
         private static Move GetCurrentMove(StreamReader streamReader, int mark)
         {
             var currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-            int index = currentMove.Field[0];
+            int index = currentMove.Field[9];
+            _field = currentMove.Field;
             _field[index] = mark;
             return currentMove;
         }
