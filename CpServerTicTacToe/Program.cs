@@ -16,75 +16,81 @@ namespace CpServerTicTacToe
 {
     public class Program
     {
-        private const int _COUNT_USERS = 2;
+        private static readonly int _port = 8888;
+        private static readonly string _ipAddress = "127.0.0.1";
 
-        private static int _port = 8888;
-        private static string _ipAddress = "127.0.0.1";
         private static TcpListener _server;
-        private static int[] _field;
-        private static Move _currentMove;
-        private static List<string> _users;
         private static BinaryFormatter _formatter;
-        private static NetworkStream _networkStream1;
-        private static NetworkStream _networkStream2;
-        private static EventWaitHandle wh;
-        private static int _curentCountUsers = 0;
-        int mark1 = 1, mark2 = 2;
+        private static NetworkStream _networkStreamClient1;
+        private static NetworkStream _networkStreamClient2;
+        private static EventWaitHandle _waitHandle;
+        private static int[] _field;
+        private static int _mark1;
+        private static int _mark2;
 
         private async static Task Main(string[] args)
         {
+            _formatter = new BinaryFormatter();
+            _waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
             _server = new TcpListener(IPAddress.Parse(_ipAddress), _port);
-            _server.Start();
-            wh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            _formatter = new BinaryFormatter(); 
-            Task.Run(Listen2);
-            Task.Delay(500);
-            await Task.Run(Listen1);
+            _mark1 = 1;
+            _mark2 = 2;
 
+            _server.Start();
+
+            Task.Run(ListenClient2);
+            Task.Delay(500);
+            await Task.Run(ListenClient1);
         }
 
-        private static void Listen1()
+        private static void ListenClient1()
         {
-            Console.WriteLine("Start listening for first player....");
             var client = _server.AcceptTcpClient();
-            Console.WriteLine("First player connected!");
-            _networkStream1 = client.GetStream();
+            _networkStreamClient1 = client.GetStream();
 
-            while (true)
+            try
             {
-                using (var streamReader = new StreamReader(_networkStream1, Encoding.UTF8))
+                while (true)
                 {
-                    Move currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    int index = currentMove.Field[0];
-                    _field[index] = mark1;
-                    wh.Set();
-                    wh.WaitOne();
+                    using (var streamReader = new StreamReader(_networkStreamClient1, Encoding.UTF8))
+                    {
+                        var currentMove = GetCurrentMove(streamReader, _mark1);
+                        _waitHandle.Set();
+                        _waitHandle.WaitOne();
+                    }
+                    SendAnswer(_networkStreamClient1);
                 }
-                SendAnswer(_networkStream1);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.StackTrace}\r\n{ex.Message}");
             }
         }
 
-        private static void Listen2()
+        private static void ListenClient2()
         {
-            Console.WriteLine("Start listening for second player....");
             var client = _server.AcceptTcpClient();
-            _networkStream2 = client.GetStream();
-            Console.WriteLine("Second player connected!");
-            wh.WaitOne();
-            Move currentMove = null;
+            _networkStreamClient2 = client.GetStream();
+            _waitHandle.WaitOne();
+            Move currentMove;
 
-            while (true)
+            try
             {
-                using (var streamReader = new StreamReader(_networkStream2, Encoding.UTF8))
+                while (true)
                 {
-                    currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    int index = currentMove.Field[0];
-                    _field[index] = mark2;
+                    using (var streamReader = new StreamReader(_networkStreamClient2, Encoding.UTF8))
+                    {
+                        currentMove = GetCurrentMove(streamReader, _mark2);
+                    }
+                    SendAnswer(_networkStreamClient2);
+                    _field = currentMove.Field;
+                    _waitHandle.Set();
+                    _waitHandle.WaitOne();
                 }
-                SendAnswer(_networkStream2);
-                _field = currentMove.Field;
-                wh.Set();
-                wh.WaitOne();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.StackTrace}\r\n{ex.Message}");
             }
         }
 
@@ -105,76 +111,12 @@ namespace CpServerTicTacToe
             }
         }
 
-        //private static bool IsGameOver()
-        //{
-
-        //    foreach (var value in _field)
-        //    {
-        //        if (IsWonVertical() || IsWonHorizontal() ||
-        //           IsWonDiagonal())
-        //            return true;
-
-        //        if (value == 0)
-        //            return false;
-        //    }
-        //    return true;
-        //}
-
-        //private static bool IsWonDiagonal()
-        //{
-        //    return CheckIsWonFirstDiagonal() ||
-        //           CheckIsWonSecondDiagonal();
-        //}
-
-        //private static bool IsWonVertical()
-        //{
-        //    return CheckIsWonVertical(0) ||
-        //           CheckIsWonVertical(1) ||
-        //           CheckIsWonVertical(2);
-        //}
-
-        //private static bool IsWonHorizontal()
-        //{
-        //    return CheckIsWonHorizontal(0) ||
-        //           CheckIsWonHorizontal(3) ||
-        //           CheckIsWonHorizontal(6);
-        //}
-
-        //private static bool CheckIsWonFirstDiagonal()
-        //{
-        //    return _field[0] == _field[4] &&
-        //           _field[4] == _field[8];
-        //}
-
-        //private static bool CheckIsWonSecondDiagonal()
-        //{
-        //    return _field[2] == _field[4] &&
-        //           _field[4] == _field[6];
-        //}
-
-        //private static bool CheckIsWonHorizontal(int position)
-        //{
-        //    int character = _field[position];
-        //    for (int i = position + 1; i < _field.Length; i++)
-        //    {
-        //        if (position + 3 > i)
-        //            break;
-
-        //        if (character != _field[i])
-        //            return false;
-        //    }
-        //    return true;
-        //}
-
-        //private static bool CheckIsWonVertical(int position)
-        //{
-        //    int character = _field[position];
-        //    for (int i = position + 3; i < _field.Length; i += 3)
-        //    {
-        //        if (character != _field[i])
-        //            return false;
-        //    }
-        //    return true;
-        //}
+        private static Move GetCurrentMove(StreamReader streamReader, int mark)
+        {
+            var currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
+            int index = currentMove.Field[0];
+            _field[index] = mark;
+            return currentMove;
+        }
     }
 }
