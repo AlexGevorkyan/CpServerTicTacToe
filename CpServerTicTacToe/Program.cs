@@ -29,7 +29,7 @@ namespace CpServerTicTacToe
         private static NetworkStream _networkStream2;
         private static EventWaitHandle wh;
         private static int _curentCountUsers = 0;
-        int mark1 = 1, mark2 = 2;
+        private static int mark1 = 1, mark2 = 2;
 
         private async static Task Main(string[] args)
         {
@@ -49,18 +49,20 @@ namespace CpServerTicTacToe
             var client = _server.AcceptTcpClient();
             Console.WriteLine("First player connected!");
             _networkStream1 = client.GetStream();
+            Move currentMove = null;
 
             while (true)
             {
                 using (var streamReader = new StreamReader(_networkStream1, Encoding.UTF8))
                 {
-                    Move currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    int index = currentMove.Field[0];
+                    currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
+                    _field = currentMove.Field;
+                    int index = currentMove.Field[9];
                     _field[index] = mark1;
                     wh.Set();
                     wh.WaitOne();
                 }
-                SendAnswer(_networkStream1);
+                SendAnswer1(currentMove);
             }
         }
 
@@ -78,10 +80,11 @@ namespace CpServerTicTacToe
                 using (var streamReader = new StreamReader(_networkStream2, Encoding.UTF8))
                 {
                     currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    int index = currentMove.Field[0];
+                    _field = currentMove.Field;
+                    int index = currentMove.Field[9];
                     _field[index] = mark2;
                 }
-                SendAnswer(_networkStream2);
+                SendAnswer2(currentMove);
                 _field = currentMove.Field;
                 wh.Set();
                 wh.WaitOne();
@@ -97,6 +100,44 @@ namespace CpServerTicTacToe
                     _formatter.Serialize(memoryStream, _field);
                     networkStream.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
                     memoryStream.Flush();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.Message}\r\n{ex.StackTrace}");
+            }
+        }
+
+        private static void SendAnswer1(Move move)
+        {
+            try
+            {
+                using (var memoryStream = new MemoryStream())
+                {
+                    move.Field = _field;
+                    _formatter.Serialize(memoryStream, move);
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    _networkStream1.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
+                    _networkStream1.Flush();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.Message}\r\n{ex.StackTrace}");
+            }
+        }
+
+        private static void SendAnswer2(Move move)
+        {
+            try
+            {
+                using (var memoryStream = new MemoryStream())
+                {
+                    move.Field = _field;
+                    _formatter.Serialize(memoryStream, move);
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    _networkStream2.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
+                    _networkStream2.Flush();
                 }
             }
             catch (Exception ex)
