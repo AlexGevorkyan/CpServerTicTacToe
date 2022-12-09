@@ -1,12 +1,9 @@
 ﻿using CpMove;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Dynamic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
@@ -36,7 +33,7 @@ namespace CpServerTicTacToe
             _server = new TcpListener(IPAddress.Parse(_ipAddress), _port);
             _server.Start();
             wh = new EventWaitHandle(false, EventResetMode.AutoReset);
-            _formatter = new BinaryFormatter(); 
+            _formatter = new BinaryFormatter();
             Task.Run(Listen2);
             Task.Delay(500);
             await Task.Run(Listen1);
@@ -53,17 +50,17 @@ namespace CpServerTicTacToe
 
             while (true)
             {
-                //using (var streamReader = new StreamReader(_networkStream1, Encoding.UTF8))
-                //{
-                    var streamReader = new StreamReader(_networkStream1, Encoding.UTF8);
-                    currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    _field = currentMove.Field;
-                    int index = currentMove.Field[9];
-                    _field[index] = mark1;
-                    wh.Set();
-                    wh.WaitOne();
-                //}
+                var streamReader = new StreamReader(_networkStream1, Encoding.UTF8);
+                currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
+                _field = currentMove.Field;
+                int index = currentMove.Field[9];
+                _field[index] = mark1;
+
                 SendAnswer1(currentMove);
+                SendAnswer2(currentMove);
+
+                wh.Set();
+                wh.WaitOne();
             }
         }
 
@@ -78,16 +75,15 @@ namespace CpServerTicTacToe
 
             while (true)
             {
-                //using (var streamReader = new StreamReader(_networkStream2, Encoding.UTF8))
-                //{
-                    var streamReader = new StreamReader(_networkStream2, Encoding.UTF8);
-                    currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
-                    _field = currentMove.Field;
-                    int index = currentMove.Field[9];
-                    _field[index] = mark2;
-                //}
-                SendAnswer2(currentMove);
+                var streamReader = new StreamReader(_networkStream2, Encoding.UTF8);
+                currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
                 _field = currentMove.Field;
+                int index = currentMove.Field[9];
+                _field[index] = mark2;
+
+                SendAnswer1(currentMove);
+                SendAnswer2(currentMove);
+
                 wh.Set();
                 wh.WaitOne();
             }
