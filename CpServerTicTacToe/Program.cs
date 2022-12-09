@@ -53,15 +53,16 @@ namespace CpServerTicTacToe
 
             while (true)
             {
-                using (var streamReader = new StreamReader(_networkStream1, Encoding.UTF8))
-                {
+                //using (var streamReader = new StreamReader(_networkStream1, Encoding.UTF8))
+                //{
+                    var streamReader = new StreamReader(_networkStream1, Encoding.UTF8);
                     currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
                     _field = currentMove.Field;
                     int index = currentMove.Field[9];
                     _field[index] = mark1;
                     wh.Set();
                     wh.WaitOne();
-                }
+                //}
                 SendAnswer1(currentMove);
             }
         }
@@ -77,13 +78,14 @@ namespace CpServerTicTacToe
 
             while (true)
             {
-                using (var streamReader = new StreamReader(_networkStream2, Encoding.UTF8))
-                {
+                //using (var streamReader = new StreamReader(_networkStream2, Encoding.UTF8))
+                //{
+                    var streamReader = new StreamReader(_networkStream2, Encoding.UTF8);
                     currentMove = _formatter.Deserialize(streamReader.BaseStream) as Move;
                     _field = currentMove.Field;
                     int index = currentMove.Field[9];
                     _field[index] = mark2;
-                }
+                //}
                 SendAnswer2(currentMove);
                 _field = currentMove.Field;
                 wh.Set();
@@ -116,7 +118,7 @@ namespace CpServerTicTacToe
                 {
                     move.Field = _field;
                     _formatter.Serialize(memoryStream, move);
-                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    //memoryStream.Seek(0, SeekOrigin.Begin);
                     _networkStream1.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
                     _networkStream1.Flush();
                 }
@@ -135,7 +137,7 @@ namespace CpServerTicTacToe
                 {
                     move.Field = _field;
                     _formatter.Serialize(memoryStream, move);
-                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    //memoryStream.Seek(0, SeekOrigin.Begin);
                     _networkStream2.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
                     _networkStream2.Flush();
                 }
