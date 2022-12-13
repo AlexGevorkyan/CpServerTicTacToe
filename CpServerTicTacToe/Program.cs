@@ -46,7 +46,14 @@ namespace CpServerTicTacToe
             var client = _server.AcceptTcpClient();
             Console.WriteLine("First player connected!");
             _networkStream1 = client.GetStream();
-            Move currentMove = null;
+            Move currentMove = new Move();
+            
+            ///
+            int[] firstMessage = new int[10];
+            firstMessage[9]=-1;
+            currentMove.Field=firstMessage;
+            SendAnswer1(currentMove);
+            ///
 
             while (true)
             {
@@ -56,6 +63,7 @@ namespace CpServerTicTacToe
                 int index = currentMove.Field[9];
                 _field[index] = mark1;
 
+                 currentMove.Field = _field;
                 SendAnswer1(currentMove);
                 SendAnswer2(currentMove);
 
@@ -70,8 +78,18 @@ namespace CpServerTicTacToe
             var client = _server.AcceptTcpClient();
             _networkStream2 = client.GetStream();
             Console.WriteLine("Second player connected!");
+
+            Move currentMove = new Move();
+
+            ///
+            int[] firstMessage = new int[10];
+            firstMessage[9]=-2;
+            currentMove.Field=firstMessage;
+            SendAnswer2(currentMove);
+            ///
+
             wh.WaitOne();
-            Move currentMove = null;
+            
 
             while (true)
             {
@@ -81,28 +99,12 @@ namespace CpServerTicTacToe
                 int index = currentMove.Field[9];
                 _field[index] = mark2;
 
+                currentMove.Field = _field;
                 SendAnswer1(currentMove);
                 SendAnswer2(currentMove);
 
                 wh.Set();
                 wh.WaitOne();
-            }
-        }
-
-        private static void SendAnswer(NetworkStream networkStream)
-        {
-            try
-            {
-                using (var memoryStream = new MemoryStream())
-                {
-                    _formatter.Serialize(memoryStream, _field);
-                    networkStream.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
-                    memoryStream.Flush();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"{ex.Message}\r\n{ex.StackTrace}");
             }
         }
 
@@ -112,7 +114,7 @@ namespace CpServerTicTacToe
             {
                 using (var memoryStream = new MemoryStream())
                 {
-                    move.Field = _field;
+                    //move.Field = _field;
                     _formatter.Serialize(memoryStream, move);
                     //memoryStream.Seek(0, SeekOrigin.Begin);
                     _networkStream1.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
@@ -131,7 +133,7 @@ namespace CpServerTicTacToe
             {
                 using (var memoryStream = new MemoryStream())
                 {
-                    move.Field = _field;
+                    //move.Field = _field;
                     _formatter.Serialize(memoryStream, move);
                     //memoryStream.Seek(0, SeekOrigin.Begin);
                     _networkStream2.Write(memoryStream.ToArray(), 0, (int)memoryStream.Length);
